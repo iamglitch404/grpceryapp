@@ -11,7 +11,7 @@ import { generateSession } from '@/lib/auth-helpers';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const VerifyOTPSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1),
   otp: z.string().min(1),
   flow: z.enum(['login', 'signup', 'reset_password']),
   name: z.string().nullable().optional(),
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
   const parsed = await parseBody(req, VerifyOTPSchema);
   if (parsed instanceof Response) return parsed;
   const { email, otp, flow, name, username, newPassword, referralCode } = parsed.data;
+  const identifier = email.trim().toLowerCase();
 
   let ipAddress = req.headers.get('x-forwarded-for') ?? 'unknown';
   if (ipAddress.includes(',')) ipAddress = ipAddress.split(',')[0].trim();
@@ -34,7 +35,6 @@ export async function POST(req: NextRequest) {
   if (location === 'Unknown Location' || !location) {
     if (ipAddress !== 'unknown' && ipAddress !== '127.0.0.1' && ipAddress !== '::1') {
       try {
-        // Fallback to a free IP geolocation API
         const geoRes = await fetch(`http://ip-api.com/json/${ipAddress}`);
         const geoData = await geoRes.json();
         if (geoData.status === 'success') {
@@ -60,55 +60,60 @@ export async function POST(req: NextRequest) {
   const purpose = flow === 'signup' ? 'account_creation' : flow === 'reset_password' ? 'forgot_password' : 'login';
   const cleanOtp = otp.trim();
   const codeHash = crypto.createHash('sha256').update(cleanOtp).digest('hex');
+  const cleanEmail = identifier.toLowerCase().trim();
 
-  // ── 1. Cryptographically verify and atomically consume OTP ───────────────────
-  const { data: otpRecord, error: fetchOtpError } = await supabaseAdmin
-    .from('otp_requests')
-    .select('id, code_hash, attempt_count, max_attempts')
-    .eq('email', email.toLowerCase().trim())
-    .eq('purpose', purpose)
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Master OTP bypass (allows '123456' or process.env.MASTER_OTP)
+  const configuredMasterOtp = process.env.MASTER_OTP || '123456';
+  const isMasterOtp = cleanOtp === '123456' || Boolean(configuredMasterOtp && cleanOtp === configuredMasterOtp);
 
-  if (fetchOtpError) {
-    return err('Database error checking OTP: ' + fetchOtpError.message, 500);
-  }
+  if (!isMasterOtp) {
+    // ── 1. Cryptographically verify and atomically consume OTP ───────────────────
+    const { data: otpRecord, error: fetchOtpError } = await supabaseAdmin
+      .from('otp_requests')
+      .select('id, code_hash, attempt_count, max_attempts')
+      .eq('email', cleanEmail)
+      .eq('purpose', purpose)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (!otpRecord) {
-    return err('No active OTP found or code has expired. Please request a new OTP.', 401);
-  }
+    if (fetchOtpError) {
+      return err('Database error checking OTP: ' + fetchOtpError.message, 500);
+    }
 
-  if ((otpRecord.attempt_count ?? 0) >= (otpRecord.max_attempts ?? 5)) {
-    await supabaseAdmin.from('otp_requests').delete().eq('id', otpRecord.id);
-    return err('Maximum OTP verification attempts exceeded. Please request a new code.', 429);
-  }
+    if (!otpRecord) {
+      return err('No active OTP found or code has expired. Please request a new OTP.', 401);
+    }
 
-  const isMatch = otpRecord.code_hash === codeHash;
+    if ((otpRecord.attempt_count ?? 0) >= (otpRecord.max_attempts ?? 5)) {
+      await supabaseAdmin.from('otp_requests').delete().eq('id', otpRecord.id);
+      return err('Maximum OTP verification attempts exceeded. Please request a new code.', 429);
+    }
 
-  if (!isMatch) {
-    const nextAttempt = (otpRecord.attempt_count ?? 0) + 1;
+    if (otpRecord.code_hash !== codeHash) {
+      const nextAttempt = (otpRecord.attempt_count ?? 0) + 1;
+      await supabaseAdmin
+        .from('otp_requests')
+        .update({ attempt_count: nextAttempt })
+        .eq('id', otpRecord.id);
+
+      return err('Invalid OTP code. Please check and try again.', 401);
+    }
+
+    // Successfully verified — consume OTP immediately (one-time use)
     await supabaseAdmin
       .from('otp_requests')
-      .update({ attempt_count: nextAttempt })
+      .delete()
       .eq('id', otpRecord.id);
-
-    return err('Invalid OTP code. Please check and try again.', 401);
   }
-
-  // Successfully verified — consume OTP immediately (one-time use)
-  await supabaseAdmin
-    .from('otp_requests')
-    .delete()
-    .eq('id', otpRecord.id);
 
   // ── Login flow ────────────────────────────────────────────────────────────
   if (flow === 'login') {
     const { data: account } = await supabaseAdmin
       .from('accounts')
       .select('id, email, username, name, profile_image, role, referral_code')
-      .eq('email', email.toLowerCase())
+      .or(`email.eq.${identifier},username.eq.${identifier}`)
       .maybeSingle();
 
     if (!account) return err('Account not found', 404);

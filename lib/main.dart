@@ -1,15 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cubepod_core/cubepod_core.dart';
 import 'package:app/core/di/injection.dart';
-import 'package:app/core/services/cache_service.dart';
-import 'package:app/features/auth/data/repositories/auth_repository.dart';
-import 'package:app/features/customer/profile/data/repositories/user_repository.dart';
-import 'package:app/features/customer/presentation/pages/main_page.dart' as customer;
-import 'package:app/features/admin/presentation/pages/main_page.dart' as admin;
-import 'package:app/features/delivery/presentation/pages/delivery_dashboard_page.dart' as delivery;
+import 'package:app/core/services/cacheService.dart';
+import 'package:app/features/customer/screens/mainPage.dart' as customer;
+import 'package:app/features/admin/dashboard/screens/mainPage.dart' as admin;
+import 'package:app/features/delivery/dashboard/screens/deliveryDashboardPage.dart' as delivery;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,9 +21,14 @@ void main() async {
 
   await CacheService.init();
   setupDependencies();
-  await CubePod.get<AuthRepository>().init();
+  await appProviderContainer.read(authRepositoryProvider).init();
 
-  runApp(const MyApp());
+  runApp(
+    UncontrolledProviderScope(
+      container: appProviderContainer,
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -85,14 +88,14 @@ class FadePageTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   void initState() {
     super.initState();
@@ -101,10 +104,10 @@ class _MainScreenState extends State<MainScreen> {
 
   void _prewarmStats() {
     try {
-      final authRepo = CubePod.get<AuthRepository>();
+      final authRepo = ref.read(authRepositoryProvider);
       if (authRepo.isLoggedIn) {
         authRepo.syncCurrentUser();
-        CubePod.get<UserRepository>().fetchStats(authRepo.authHeaders);
+        ref.read(userRepositoryProvider).fetchStats(authRepo.authHeaders);
       }
     } catch (_) {}
   }
@@ -112,7 +115,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Map<String, dynamic>?>(
-      valueListenable: CubePod.get<AuthRepository>().authStateNotifier,
+      valueListenable: ref.read(authRepositoryProvider).authStateNotifier,
       builder: (context, user, _) {
         final role = (user?['role'] ?? 'customer').toString().toLowerCase();
 
@@ -129,5 +132,3 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
-
-

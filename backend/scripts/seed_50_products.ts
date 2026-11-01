@@ -1,8 +1,16 @@
 import { createClient } from 'npm:@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://rrpcewnintodyxubueeu.supabase.co';
+const SUPABASE_URL =
+  (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_URL') : process.env.SUPABASE_URL) ||
+  'https://rrpcewnintodyxubueeu.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJycGNld25pbnRvZHl4dWJ1ZWV1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjUyNzc4MSwiZXhwIjoyMTAyMTAzNzgxfQ.hgAg7Ak53OQfx45g95SekKp7mlJpLz9XsPhndOnqzWg';
+  (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') : process.env.SUPABASE_SERVICE_ROLE_KEY) || '';
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Error: SUPABASE_SERVICE_ROLE_KEY must be set in the environment.');
+  if (typeof Deno !== 'undefined') Deno.exit(1);
+  else process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

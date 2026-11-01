@@ -21,8 +21,7 @@ export async function GET(req: NextRequest) {
 
     const partnerId = partner?.id || auth.accountId;
 
-    // 2. Fetch orders assigned to this partner
-    // We look at delivery_assignments first, and fallback to orders
+    // 2. Fetch orders assigned to this partner from delivery_assignments
     let assignments: any[] = [];
     try {
       const { data: directAssignments } = await supabaseAdmin
@@ -34,12 +33,24 @@ export async function GET(req: NextRequest) {
       if (directAssignments) assignments = directAssignments;
     } catch (_) {}
 
-    // Also look up orders where status indicates delivery activity or assignment
+    const assignedOrderIds = assignments.map((a: any) => a.order_id).filter(Boolean);
+
+    if (assignedOrderIds.length === 0) {
+      return ok({
+        pending_assignments: [],
+        active_orders: [],
+        completed_today: [],
+        total_active: 0,
+        total_pending: 0,
+        total_completed: 0,
+      });
+    }
+
     const { data: ordersData, error: ordersErr } = await supabaseAdmin
       .from('orders')
       .select('*, order_items(*)')
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .in('id', assignedOrderIds)
+      .order('created_at', { ascending: false });
 
     if (ordersErr) {
       console.error('[delivery/orders/GET] error:', ordersErr);
@@ -52,7 +63,7 @@ export async function GET(req: NextRequest) {
     const enrichedOrders = allOrders.map((ord: any) => {
       const matchAssignment = assignments.find((a: any) => a.order_id === ord.id);
       const deliveryStatus = matchAssignment?.status ?? 
-        (ord.status === 'Out for Delivery' ? 'in_transit' : 
+        (ord.status === 'Out for Delivery' || ord.status === 'On the way' ? 'in_transit' : 
          ord.status === 'Delivered' ? 'delivered' : 'assigned');
 
       // Resolve live destination / customer coordinates

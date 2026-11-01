@@ -92,6 +92,13 @@ export async function POST(req: NextRequest) {
 
   const { id: _id, ...fields } = parsed.data;
 
+  // Enforce DB constraint: original_price_paise >= price_paise
+  if (fields.original_price_paise !== undefined && fields.original_price_paise !== null) {
+    if (fields.original_price_paise < fields.price_paise) {
+      fields.original_price_paise = fields.price_paise;
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from('products')
     .insert(fields)
@@ -120,6 +127,13 @@ export async function PATCH(req: NextRequest) {
 
   const { id, ...updates } = parsed.data;
   if (!id) return err('Missing product id', 400);
+
+  // Enforce DB constraint: original_price_paise >= price_paise
+  if (updates.original_price_paise !== undefined && updates.original_price_paise !== null) {
+    if (updates.price_paise !== undefined && updates.original_price_paise < updates.price_paise) {
+      updates.original_price_paise = updates.price_paise;
+    }
+  }
 
   const { data, error } = await supabaseAdmin
     .from('products')

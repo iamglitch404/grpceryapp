@@ -1,49 +1,51 @@
-import 'package:cubepod_core/cubepod_core.dart';
-import 'package:app/core/network/http_client.dart' as http;
-import 'package:app/core/services/routing_service.dart';
-import 'package:app/features/auth/data/repositories/auth_repository.dart';
-import 'package:app/features/auth/presentation/state/auth_view_state.dart';
-import 'package:app/features/customer/cart/data/repositories/cart_repository.dart';
-import 'package:app/features/customer/cart/presentation/state/cart_state.dart';
-import 'package:app/features/customer/notifications/presentation/state/notification_state.dart';
-import 'package:app/features/customer/orders/data/repositories/order_repository.dart' as customer_orders;
-import 'package:app/features/customer/explore/data/repositories/explore_repository.dart';
-import 'package:app/features/customer/home/data/repositories/product_repository.dart';
-import 'package:app/features/customer/home/data/repositories/review_repository.dart';
-import 'package:app/features/customer/profile/data/repositories/user_repository.dart';
-import 'package:app/features/customer/submissions/data/repositories/submission_repository.dart';
-import 'package:app/features/admin/data/repositories/order_repository.dart' as admin_orders;
-import 'package:app/features/delivery/data/repositories/delivery_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/core/network/httpClient.dart' as http;
+import 'package:app/core/services/routingService.dart';
+import 'package:app/features/auth/providers/authRepository.dart';
+import 'package:app/features/customer/cart/providers/cartRepository.dart';
+import 'package:app/features/customer/orders/providers/orderRepository.dart' as customer_orders;
+import 'package:app/features/customer/explore/providers/exploreRepository.dart';
+import 'package:app/features/customer/home/providers/productRepository.dart';
+import 'package:app/features/customer/home/providers/reviewRepository.dart';
+import 'package:app/features/customer/profile/providers/userRepository.dart';
+import 'package:app/features/customer/submissions/providers/submissionRepository.dart';
+import 'package:app/features/admin/orders/providers/orderRepository.dart' as admin_orders;
+import 'package:app/features/delivery/dashboard/providers/deliveryRepository.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Riverpod Providers for Core Services & Repositories
+// ─────────────────────────────────────────────────────────────────────────────
+
+final routingServiceProvider = Provider<RoutingService>((ref) => RoutingService());
+final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository());
+final cartRepositoryProvider = Provider<CartRepository>(
+  (ref) => CartRepository(ref.watch(authRepositoryProvider)),
+);
+final customerOrderRepositoryProvider = Provider<customer_orders.OrderRepository>(
+  (ref) => customer_orders.OrderRepository(ref.watch(authRepositoryProvider)),
+);
+final exploreRepositoryProvider = Provider<ExploreRepository>((ref) => ExploreRepository());
+final productRepositoryProvider = Provider<ProductRepository>((ref) => ProductRepository());
+final reviewRepositoryProvider = Provider<ReviewRepository>((ref) => ReviewRepository());
+final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepository());
+final submissionRepositoryProvider = Provider<SubmissionRepository>((ref) => SubmissionRepository());
+final adminOrderRepositoryProvider = Provider<admin_orders.OrderRepository>(
+  (ref) => admin_orders.OrderRepository(ref.watch(authRepositoryProvider)),
+);
+final deliveryRepositoryProvider = Provider<DeliveryRepository>(
+  (ref) => DeliveryRepository(ref.watch(authRepositoryProvider)),
+);
+
+/// Global Riverpod ProviderContainer backing the application
+late ProviderContainer appProviderContainer;
 
 void setupDependencies() {
+  appProviderContainer = ProviderContainer();
+
   // Core Network unauthorized hook
   http.onUnauthorizedResponse = () {
     try {
-      CubePod.get<AuthRepository>().logout();
+      appProviderContainer.read(authRepositoryProvider).logout();
     } catch (_) {}
   };
-
-  // Shared / Core Services
-  CubePod.register<RoutingService>((c) => RoutingService(), scope: Scope.singleton);
-
-  // Auth & Core State
-  CubePod.register<AuthViewState>((c) => AuthViewState(), scope: Scope.singleton);
-  CubePod.register<AuthRepository>((c) => AuthRepository(), scope: Scope.singleton);
-
-  // Customer Domain
-  CubePod.register<CartRepository>((c) => CartRepository(), scope: Scope.singleton);
-  CubePod.register<CartState>((c) => CartState(), scope: Scope.singleton);
-  CubePod.register<NotificationState>((c) => NotificationState(), scope: Scope.singleton);
-  CubePod.register<customer_orders.OrderRepository>((c) => customer_orders.OrderRepository(), scope: Scope.singleton);
-  CubePod.register<ExploreRepository>((c) => ExploreRepository(), scope: Scope.singleton);
-  CubePod.register<ProductRepository>((c) => ProductRepository(), scope: Scope.singleton);
-  CubePod.register<ReviewRepository>((c) => ReviewRepository(), scope: Scope.singleton);
-  CubePod.register<UserRepository>((c) => UserRepository(), scope: Scope.singleton);
-  CubePod.register<SubmissionRepository>((c) => SubmissionRepository(), scope: Scope.singleton);
-
-  // Admin Domain
-  CubePod.register<admin_orders.OrderRepository>((c) => admin_orders.OrderRepository(), scope: Scope.singleton);
-
-  // Delivery Domain
-  CubePod.register<DeliveryRepository>((c) => DeliveryRepository(), scope: Scope.singleton);
 }

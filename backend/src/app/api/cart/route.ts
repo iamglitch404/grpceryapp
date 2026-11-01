@@ -38,20 +38,22 @@ export async function GET(req: NextRequest) {
     return err('Failed to fetch cart', 500);
   }
 
-  const items = (cartRows ?? []).map((row: any) => {
-    const p = row.products;
-    return {
-      id: row.id,
-      product_id: row.product_id,
-      quantity: row.quantity,
-      price_paise: p?.price_paise ?? 0,
-      title: p?.title ?? '',
-      image_url: p?.image_url ?? '',
-      unit: p?.unit ?? '1 kg',
-      stock_quantity: p?.stock_quantity ?? 0,
-      foods: p,
-    };
-  });
+  const items = (cartRows ?? [])
+    .filter((row: any) => row.products != null)
+    .map((row: any) => {
+      const p = row.products;
+      return {
+        id: row.id,
+        product_id: row.product_id,
+        quantity: row.quantity,
+        price_paise: p?.price_paise ?? 0,
+        title: p?.title ?? '',
+        image_url: p?.image_url ?? '',
+        unit: p?.unit ?? '1 kg',
+        stock_quantity: p?.stock_quantity ?? 0,
+        foods: p,
+      };
+    });
 
   // Calculate totals server-side (authoritative)
   const subtotalPaise = items.reduce(

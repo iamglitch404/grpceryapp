@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase';
-import { ok, err, parseBody, handleOptions, requireAuth } from '@/lib/api';
+import { ok, err, parseBody, handleOptions, requireAdmin } from '@/lib/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/product-approvals — List submissions for admin review
@@ -9,7 +9,7 @@ import { ok, err, parseBody, handleOptions, requireAuth } from '@/lib/api';
 export async function GET(req: NextRequest) {
   if (req.method === 'OPTIONS') return handleOptions();
 
-  const auth = await requireAuth(req);
+  const auth = await requireAdmin(req);
   if (auth instanceof Response) return auth;
 
   const url = new URL(req.url);
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('products')
-    .select('*, categories(id, name), users!seller_id(id, name, phone, email, profile_image)')
+    .select('*, categories(id, name), accounts!seller_id(id, name, phone, email, profile_image)')
     .order('created_at', { ascending: false });
 
   if (status && status !== 'all') {
@@ -31,9 +31,15 @@ export async function GET(req: NextRequest) {
     return err('Failed to fetch product approvals', 500);
   }
 
+  const submissions = (data ?? []).map((p: any) => ({
+    ...p,
+    users: p.accounts || p.users || null,
+  }));
+
   return ok({
-    submissions: data ?? [],
-    total: data?.length ?? 0,
+    submissions,
+    products: submissions,
+    total: submissions.length,
   });
 }
 
@@ -51,7 +57,7 @@ const ApprovalActionSchema = z.object({
 export async function PATCH(req: NextRequest) {
   if (req.method === 'OPTIONS') return handleOptions();
 
-  const auth = await requireAuth(req);
+  const auth = await requireAdmin(req);
   if (auth instanceof Response) return auth;
 
   const parsed = await parseBody(req, ApprovalActionSchema);
@@ -62,7 +68,7 @@ export async function PATCH(req: NextRequest) {
   // 1. Fetch current product
   const { data: product, error: fetchErr } = await supabaseAdmin
     .from('products')
-    .select('*, users!seller_id(id, name, email)')
+    .select('*, accounts!seller_id(id, name, email)')
     .eq('id', product_id)
     .single();
 
@@ -91,7 +97,7 @@ export async function PATCH(req: NextRequest) {
   } else if (action === 'list_in_store') {
     updates.approval_status = 'listed';
     updates.is_active = true;
-    updates.picked_up_at = new Date().toISOString();
+    updates.approved_at = product.approved_at || new Date().toISOString();
 
     notifTitle = `Product Live on Store: ${product.title}`;
     notifMessage = `Item picked up & verified! Your product "${product.title}" (${product.product_code}) is now active and listed in the store category for customer orders.`;
@@ -118,15 +124,14 @@ export async function PATCH(req: NextRequest) {
     return err('Failed to update product approval status', 500);
   }
 
-
   // Send notification to seller
   if (sellerId) {
     await supabaseAdmin.from('notifications').insert({
       account_id: sellerId,
       title: notifTitle,
-      message: notifMessage,
-      type: notifType,
+      body: notifMessage,
       data: {
+        type: notifType,
         product_id: product.id,
         product_code: product.product_code,
         title: product.title,

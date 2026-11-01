@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (req.method === 'OPTIONS') return handleOptions();
   
-  const auth = await requireAuth(req);
+  const auth = await requireAdmin(req);
   if (auth instanceof Response) return auth;
 
   const parsed = await parseBody(req, CategorySchema);
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   if (req.method === 'OPTIONS') return handleOptions();
   
-  const auth = await requireAuth(req);
+  const auth = await requireAdmin(req);
   if (auth instanceof Response) return auth;
 
   const parsed = await parseBody(req, CategorySchema);

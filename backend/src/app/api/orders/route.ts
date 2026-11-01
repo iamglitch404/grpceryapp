@@ -149,6 +149,7 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .insert({
         account_id: userId,
+        customer_id: userId,
         subtotal_paise: subtotal,
         delivery_fee_paise: deliveryFee,
         platform_fee_paise: platformFee,
@@ -257,21 +258,30 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from('orders')
     .select(`
-      id, account_id, subtotal_paise, delivery_fee_paise, platform_fee_paise,
+      id, account_id, customer_id, subtotal_paise, delivery_fee_paise, platform_fee_paise,
       slot_fee_paise, total_paise, delivery_slot, address_snapshot,
-      payment_method, payment_status, status, points_awarded, created_at,
+      payment_method, payment_status, status, points_awarded,
+      device_location_address, device_latitude, device_longitude,
+      destination_address, destination_latitude, destination_longitude,
+      created_at, updated_at,
       order_items (
         id, product_id, title_snapshot, price_paise_snapshot,
         image_url_snapshot, unit_snapshot, quantity
       )
     `)
-    .eq('account_id', userId)
+    .or(`account_id.eq.${userId},customer_id.eq.${userId}`)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (status) {
-    if (status.startsWith('!')) {
+    if (status === 'active') {
+      query = query.in('status', ['Pending', 'Processing', 'Packed', 'Out for Delivery', 'On the way']);
+    } else if (status === 'history' || status === 'previous') {
+      query = query.in('status', ['Delivered', 'Cancelled', 'Canceled']);
+    } else if (status.startsWith('!')) {
       query = query.neq('status', status.substring(1));
+    } else if (status.includes(',')) {
+      query = query.in('status', status.split(',').map(s => s.trim()));
     } else {
       query = query.eq('status', status);
     }

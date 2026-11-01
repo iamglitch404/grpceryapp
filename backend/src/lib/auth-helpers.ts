@@ -56,35 +56,37 @@ export async function sendOTP(
       </p>
     </div>`;
 
-  // 1. Direct Gmail SMTP via Nodemailer (embedded credentials for testing)
-  const smtpUser = process.env.SMTP_USER || 'mrperfect9863@gmail.com';
-  const smtpPass = (process.env.SMTP_PASS || 'ifyoghfzhpmmpohr').replace(/\s+/g, '');
+  // 1. Direct SMTP via Nodemailer (if configured in environment)
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, '');
   const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
   const smtpPort = Number(process.env.SMTP_PORT || 465);
-  const smtpFrom = process.env.EMAIL_FROM || '"Dovan" <mrperfect9863@gmail.com>';
+  const smtpFrom = process.env.EMAIL_FROM || (smtpUser ? `"Dovan" <${smtpUser}>` : '"Dovan" <noreply@dovan.com>');
 
-  try {
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: true,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
+  if (smtpUser && smtpPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
 
-    await transporter.sendMail({
-      from: smtpFrom,
-      to: email,
-      subject: `Your Dovan Verification Code: ${otpCode}`,
-      text: `Your Dovan verification code is: ${otpCode}. It expires in 10 minutes.`,
-      html: emailHtml,
-    });
+      await transporter.sendMail({
+        from: smtpFrom,
+        to: email,
+        subject: `Your Dovan Verification Code: ${otpCode}`,
+        text: `Your Dovan verification code is: ${otpCode}. It expires in 10 minutes.`,
+        html: emailHtml,
+      });
 
-    return;
-  } catch {
-    // Suppress SMTP transport error logging to prevent leaking credentials
+      return;
+    } catch {
+      // Suppress SMTP transport error logging to prevent leaking credentials
+    }
   }
 
   // 2. Resend fallback
@@ -98,9 +100,14 @@ export async function sendOTP(
         subject: `Your Dovan Verification Code: ${otpCode}`,
         html: emailHtml,
       });
+      return;
     } catch {
       // Suppress Resend error logging
     }
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[DEV OTP] Generated verification code for ${email}: ${otpCode}`);
   }
 }
 

@@ -98,8 +98,10 @@ export async function PATCH(req: NextRequest) {
   let status = rawStatus;
   const lower = rawStatus.toLowerCase();
   if (lower === 'pending') status = 'Pending';
+  else if (lower === 'processing') status = 'Processing';
   else if (lower === 'packed') status = 'Packed';
-  else if (lower === 'on the way' || lower === 'out for delivery') status = 'On the way';
+  else if (lower === 'out for delivery') status = 'Out for Delivery';
+  else if (lower === 'on the way') status = 'On the way';
   else if (lower === 'delivered') status = 'Delivered';
   else if (lower === 'cancelled' || lower === 'canceled') status = 'Cancelled';
 
@@ -107,10 +109,20 @@ export async function PATCH(req: NextRequest) {
   const updates: Record<string, string> = { status };
   if (status === 'Delivered') updates.payment_status = 'paid';
 
-  const { error } = await supabaseAdmin
+  let { error } = await supabaseAdmin
     .from('orders')
     .update(updates)
     .eq('id', targetId);
+
+  // Fallback for databases using legacy status check constraint ('Processing' / 'Out for Delivery')
+  if (error && (status === 'Packed' || status === 'On the way')) {
+    const fallbackStatus = status === 'Packed' ? 'Processing' : 'Out for Delivery';
+    const retry = await supabaseAdmin
+      .from('orders')
+      .update({ ...updates, status: fallbackStatus })
+      .eq('id', targetId);
+    error = retry.error;
+  }
 
   if (error) {
     console.error('[admin/orders/PATCH] error:', error);

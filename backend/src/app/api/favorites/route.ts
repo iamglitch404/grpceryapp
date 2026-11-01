@@ -34,14 +34,16 @@ export async function GET(req: NextRequest) {
   }
 
   // Flatten the response slightly for the frontend
-  const formatted = data.map(item => ({
-    favorite_id: item.id,
-    account_id: item.account_id,
-    user_id: item.account_id,
-    product_id: item.product_id,
-    created_at: item.created_at,
-    product: item.products
-  }));
+  const formatted = data
+    .filter(item => item.products != null)
+    .map(item => ({
+      favorite_id: item.id,
+      account_id: item.account_id,
+      user_id: item.account_id,
+      product_id: item.product_id,
+      created_at: item.created_at,
+      product: item.products
+    }));
 
   return ok({ favorites: formatted });
 }

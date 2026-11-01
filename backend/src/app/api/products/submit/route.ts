@@ -77,9 +77,9 @@ export async function POST(req: NextRequest) {
   await supabaseAdmin.from('notifications').insert({
     account_id: userId,
     title: 'Product Submitted: ' + data.title,
-    message: `Your product "${data.title}" (Code: ${productCode}) has been submitted for review. Admin will schedule pickup shortly.`,
-    type: 'product_submission',
+    body: `Your product "${data.title}" (Code: ${productCode}) has been submitted for review. Admin will schedule pickup shortly.`,
     data: {
+      type: 'product_submission',
       product_id: newProduct.id,
       product_code: productCode,
       title: data.title,

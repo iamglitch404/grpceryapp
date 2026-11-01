@@ -89,118 +89,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
-  cubepod:
-    dependency: "direct main"
-    description:
-      name: cubepod
-      sha256: e9c281b5220e5c6978ebe0f49889cc419d81d878ade94679b853ed6e8afcdef8
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_async:
-    dependency: transitive
-    description:
-      name: cubepod_async
-      sha256: "77502b071a9c3cc93df20f62a2716130aeceb4c9f35bc6d2a83f55a0d351dfa6"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_core:
-    dependency: "direct main"
-    description:
-      name: cubepod_core
-      sha256: "246d2e21ab1e362faa7090b9e6273e50719012602bc824ac400c0b8e0a80a784"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_enterprise:
-    dependency: transitive
-    description:
-      name: cubepod_enterprise
-      sha256: "3164b52e86102a2212cb9d3047b9d2676bcf9320f4381de3ab7bd2910df66b0c"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_events:
-    dependency: transitive
-    description:
-      name: cubepod_events
-      sha256: "0909d0be1af3cc6fe07c56841b7f45c1981d151849b5af22ef873ad97b9a5623"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_flutter:
-    dependency: "direct main"
-    description:
-      name: cubepod_flutter
-      sha256: "40fc780021ba73dd4e587f66f6db772e00f5dbfe82210fb5f79303cb0544f4ef"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_network:
-    dependency: transitive
-    description:
-      name: cubepod_network
-      sha256: "97ac89a371b44d5400011cc625f8ccea527d3669d5458488fe1ab87cf4632abe"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_query:
-    dependency: transitive
-    description:
-      name: cubepod_query
-      sha256: ef3cb29f61a2723706fc8924b444eb2c01045de7ee78faf12dc4cf44ddb34fc8
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_resources:
-    dependency: transitive
-    description:
-      name: cubepod_resources
-      sha256: "162bb9def0cbc619c8822e9c47acb959e835a8ab5cca215537e79b965e40577f"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_router:
-    dependency: transitive
-    description:
-      name: cubepod_router
-      sha256: "9f039d99e10022c1b955765ef26b79c1ef8bbfc3df7c351ad25bc4f817469784"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_scheduler:
-    dependency: transitive
-    description:
-      name: cubepod_scheduler
-      sha256: "94320ac5ad6a9d5c29da63367961e59a133c988d3ffb1cf3472a608cae0a5869"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_state:
-    dependency: "direct main"
-    description:
-      name: cubepod_state
-      sha256: "0939fd92ee693c313a58214cccafc7c040f96f933541a190b2e9c5d0b23df6c1"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_storage:
-    dependency: transitive
-    description:
-      name: cubepod_storage
-      sha256: ea3fceade42010bd1fa450754f029fe6d1ae4f14053dafbc8b7f789de9497de9
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
-  cubepod_sync:
-    dependency: transitive
-    description:
-      name: cubepod_sync
-      sha256: e38eee00eafe3852da27c178ab3f0c97801c7ad7710ec7061af1f8f403b6873c
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.5"
   cupertino_icons:
     dependency: "direct main"
     description:
@@ -382,6 +270,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.35"
+  flutter_riverpod:
+    dependency: "direct main"
+    description:
+      name: flutter_riverpod
+      sha256: "9532ee6db4a943a1ed8383072a2e3eeda041db5657cdf6d2acecf3c21ecbe7e1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.6.1"
   flutter_svg:
     dependency: "direct main"
     description:
@@ -808,6 +704,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
+  riverpod:
+    dependency: transitive
+    description:
+      name: riverpod
+      sha256: "59062512288d3056b2321804332a13ffdd1bf16df70dcc8e506e411280a72959"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.6.1"
   share_plus:
     dependency: "direct main"
     description:
@@ -901,6 +805,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.12.1"
+  state_notifier:
+    dependency: transitive
+    description:
+      name: state_notifier
+      sha256: b8677376aa54f2d7c58280d5a007f9e8774f1968d1fb1c096adcb4792fba29bb
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   stream_channel:
     dependency: transitive
     description:
@@ -1126,5 +1038,5 @@ packages:
     source: hosted
     version: "3.1.3"
 sdks:
-  dart: ">=3.12.2 <4.0.0"
+  dart: ">=3.12.1 <4.0.0"
   flutter: ">=3.44.0"

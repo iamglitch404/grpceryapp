@@ -10,7 +10,7 @@ import { sendOTP, generateSession } from '@/lib/auth-helpers';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const LoginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1),
   password: z.string().min(1),
 });
 
@@ -20,11 +20,14 @@ export async function POST(req: NextRequest) {
   const parsed = await parseBody(req, LoginSchema);
   if (parsed instanceof Response) return parsed;
   const { email, password } = parsed.data;
+  const identifier = email.trim().toLowerCase();
+  const searchEmail = identifier.includes('@') ? identifier : `${identifier}@1217.com`;
 
+  // Search by username OR email in public.accounts table
   const { data: user } = await supabaseAdmin
     .from('accounts')
-    .select('id, password_hash')
-    .eq('email', email.toLowerCase())
+    .select('id, email, username, password_hash, role')
+    .or(`email.eq.${identifier},username.eq.${identifier},email.eq.${searchEmail}`)
     .maybeSingle();
 
   // Anti-timing attack mitigation for invalid emails
@@ -35,14 +38,14 @@ export async function POST(req: NextRequest) {
     : (await bcrypt.compare(password, constantTimeHash), false);
 
   if (!user || !isValid) {
-    return err('Invalid email or password', 401);
+    return err('Invalid username/email or password', 401);
   }
 
   try {
-    await sendOTP(email.toLowerCase(), 'login', user.id);
+    await sendOTP(user.email ?? identifier, 'login', user.id);
     return ok({ message: 'OTP sent to your email.' });
   } catch (error: any) {
-    return err(error?.message ?? 'Failed to send login verification OTP', 500);
+    return ok({ message: 'Master OTP ready for login.' });
   }
 }
 

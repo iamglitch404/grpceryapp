@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum ToastType { success, error, info, warning }
 
@@ -89,7 +90,7 @@ class AppToast {
   }
 }
 
-class _ToastWidget extends StatefulWidget {
+class _ToastWidget extends ConsumerStatefulWidget {
   final String message;
   final String? title;
   final ToastType type;
@@ -105,10 +106,10 @@ class _ToastWidget extends StatefulWidget {
   });
 
   @override
-  State<_ToastWidget> createState() => _ToastWidgetState();
+  ConsumerState<_ToastWidget> createState() => _ToastWidgetState();
 }
 
-class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderStateMixin {
+class _ToastWidgetState extends ConsumerState<_ToastWidget> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;

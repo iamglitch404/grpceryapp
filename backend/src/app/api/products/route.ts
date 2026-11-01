@@ -32,8 +32,7 @@ export async function GET(req: NextRequest) {
       categories ( id, name, color_hex ),
       subcategories ( id, name, slug )
     `)
-    .eq('is_active', true)
-    .or('approval_status.eq.listed,approval_status.is.null');
+    .eq('is_active', true);
 
   if (ids) {
     const idList = ids.split(',').map((s) => s.trim()).filter(Boolean);
@@ -53,11 +52,31 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  const { data: products, error } = await query;
+  let { data: products, error } = await query;
 
   if (error) {
-    console.error('[products/GET] error:', error);
-    return err('Failed to fetch products', 500);
+    console.error('[products/GET] Primary query error, attempting fallback:', error);
+    let fallbackQuery = supabaseAdmin
+      .from('products')
+      .select('*')
+      .eq('is_active', true);
+
+    if (ids) {
+      const idList = ids.split(',').map((s) => s.trim()).filter(Boolean);
+      if (idList.length > 0) fallbackQuery = fallbackQuery.in('id', idList);
+    }
+    if (categoryId) fallbackQuery = fallbackQuery.eq('category_id', categoryId);
+    if (subcategoryId) fallbackQuery = fallbackQuery.eq('subcategory_id', subcategoryId);
+    if (todaysChoice) fallbackQuery = fallbackQuery.eq('is_todays_choice', true);
+    if (specialDeal) fallbackQuery = fallbackQuery.eq('is_special_deal', true);
+    if (popular) fallbackQuery = fallbackQuery.eq('is_popular', true);
+    if (search) fallbackQuery = fallbackQuery.ilike('title', `%${search}%`);
+
+    const fallbackRes = await fallbackQuery
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    products = fallbackRes.data;
   }
 
   let formattedProducts = products?.map((p: any) => ({

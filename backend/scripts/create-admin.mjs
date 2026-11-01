@@ -14,7 +14,6 @@ const candidatePaths = [
   path.resolve(process.cwd(), 'backend', '.env.local'),
   path.resolve(__dirname, '..', '.env.local'),
   path.resolve(__dirname, '.env.local'),
-  '/home/bishwaxyz/Groceryapp/backend/.env.local',
 ];
 
 let supabaseUrl = process.env.SUPABASE_URL;

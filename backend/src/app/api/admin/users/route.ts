@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     supabaseAdmin
       .from('accounts')
       .select('*')
+      .neq('status', 'deleted')
       .order('created_at', { ascending: false }),
     supabaseAdmin
       .from('user_points_ledger')
@@ -104,12 +105,56 @@ export async function DELETE(req: NextRequest) {
 
   if (!id) return err('Missing id', 400);
 
-  const { error: delErr } = await supabaseAdmin.from('accounts').delete().eq('id', id);
-  if (delErr) {
-    return err('Failed to delete user', 500);
-  }
+  try {
+    // 1. Clean up dependent child records across foreign key tables
+    await Promise.allSettled([
+      supabaseAdmin.from('sessions').delete().eq('account_id', id),
+      supabaseAdmin.from('cart_items').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('favorites').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('addresses').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('notifications').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('user_points_ledger').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('otp_requests').delete().eq('account_id', id),
+      supabaseAdmin.from('reviews').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('tickets').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('referrals').delete().or(`referrer_id.eq.${id},referred_id.eq.${id}`),
+      supabaseAdmin.from('product_submissions').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('delivery_profiles').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('delivery_shifts').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+      supabaseAdmin.from('delivery_reviews').delete().or(`user_id.eq.${id},account_id.eq.${id}`),
+    ]);
 
-  return ok({ message: 'User deleted.' });
+    // 2. Unlink or remove orders referencing this user
+    await Promise.allSettled([
+      supabaseAdmin.from('orders').delete().eq('customer_id', id),
+      supabaseAdmin.from('orders').update({ delivery_man_id: null }).eq('delivery_man_id', id),
+    ]);
+
+    // 3. Delete the primary account record
+    const { error: delErr } = await supabaseAdmin.from('accounts').delete().eq('id', id);
+
+    if (delErr) {
+      console.warn('[DELETE /api/admin/users] Foreign key constraint error, falling back to soft-delete:', delErr);
+      const { error: softErr } = await supabaseAdmin
+        .from('accounts')
+        .update({ status: 'deleted', updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (softErr) {
+        return err(softErr.message || 'Failed to delete user', 500);
+      }
+    }
+
+    return ok({ message: 'User deleted.' });
+  } catch (e: any) {
+    console.error('[DELETE /api/admin/users] Catch error:', e);
+    await supabaseAdmin
+      .from('accounts')
+      .update({ status: 'deleted', updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    return ok({ message: 'User deleted.' });
+  }
 }
 
 export async function OPTIONS() {

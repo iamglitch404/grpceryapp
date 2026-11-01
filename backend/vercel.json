@@ -1,14 +1,3 @@
 {
-  "build": {
-    "env": {
-      "SUPABASE_URL": "https://rrpcewnintodyxubueeu.supabase.co",
-      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJycGNld25pbnRvZHl4dWJ1ZWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1Mjc3ODEsImV4cCI6MjEwMjEwMzc4MX0.-ZdBFy-OmUU-1gBXyaYfgDbXn1AoHIU2OAuqzeLMK_k",
-      "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJycGNld25pbnRvZHl4dWJ1ZWV1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjUyNzc4MSwiZXhwIjoyMTAyMTAzNzgxfQ.hgAg7Ak53OQfx45g95SekKp7mlJpLz9XsPhndOnqzWg"
-    }
-  },
-  "env": {
-    "SUPABASE_URL": "https://rrpcewnintodyxubueeu.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJycGNld25pbnRvZHl4dWJ1ZWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1Mjc3ODEsImV4cCI6MjEwMjEwMzc4MX0.-ZdBFy-OmUU-1gBXyaYfgDbXn1AoHIU2OAuqzeLMK_k",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJycGNld25pbnRvZHl4dWJ1ZWV1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjUyNzc4MSwiZXhwIjoyMTAyMTAzNzgxfQ.hgAg7Ak53OQfx45g95SekKp7mlJpLz9XsPhndOnqzWg"
-  }
+  "framework": "nextjs"
 }

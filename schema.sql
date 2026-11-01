@@ -506,7 +506,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   payment_status           text             NOT NULL DEFAULT 'pending'
                                             CHECK (payment_status IN ('pending', 'paid', 'refunded', 'failed')),
   status                   text             NOT NULL DEFAULT 'Pending'
-                                            CHECK (status IN ('Pending', 'Processing', 'Out for Delivery', 'Delivered', 'Cancelled')),
+                                            CHECK (status IN ('Pending', 'Processing', 'Packed', 'Out for Delivery', 'On the way', 'Delivered', 'Cancelled')),
   device_location_address  text,
   device_latitude          double precision CHECK (device_latitude IS NULL OR (device_latitude >= -90.0 AND device_latitude <= 90.0)),
   device_longitude         double precision CHECK (device_longitude IS NULL OR (device_longitude >= -180.0 AND device_longitude <= 180.0)),
