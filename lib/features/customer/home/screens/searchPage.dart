@@ -48,7 +48,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Future<void> _fetchData() async {
-    ref.read(searchPageProvider.notifier).update((s) => s.copyWith(isLoading: true));
+    final currentState = ref.read(searchPageProvider);
+    final hasData = currentState.categories.isNotEmpty || currentState.products.isNotEmpty;
+    if (!hasData) {
+      ref.read(searchPageProvider.notifier).update((s) => s.copyWith(isLoading: true));
+    }
     try {
       final parsedCategories = await ref.read(productRepositoryProvider).fetchCategories();
       var selectedIdx = ref.read(searchPageProvider).selectedCategoryIndex;
@@ -115,23 +119,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             children: [
               _buildTopBar(),
               const SizedBox(height: 10),
-              if (searchState.isLoading)
-                const Expanded(
-                  child: Center(
-                    child: CircularProgressIndicator(color: Color(0xFF185B3A)),
-                  ),
-                )
-              else ...[
-                _buildCategoryList(searchState),
-                if (searchState.categories.isNotEmpty) const SizedBox(height: 10),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: const Color(0xFF185B3A),
-                    onRefresh: _fetchData,
-                    child: _buildProductGrid(searchState),
-                  ),
+              _buildCategoryList(searchState),
+              if (searchState.categories.isNotEmpty) const SizedBox(height: 10),
+              Expanded(
+                child: RefreshIndicator(
+                  color: const Color(0xFF185B3A),
+                  onRefresh: _fetchData,
+                  child: _buildProductGrid(searchState),
                 ),
-              ],
+              ),
             ],
           ),
         ),

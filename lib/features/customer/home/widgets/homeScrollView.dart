@@ -2,9 +2,7 @@
 // Extracted from homePage.dart to reduce its size.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:app/core/di/injection.dart';
-import 'package:app/features/auth/screens/authPage.dart';
+import 'package:app/core/widgets/skeletonLoader.dart';
 import 'package:app/features/customer/home/widgets/homeBannerCarousel.dart';
 import 'package:app/features/customer/home/widgets/homeCategoriesSection.dart';
 import 'package:app/features/customer/home/widgets/homeEmptyCatalogState.dart';
@@ -56,8 +54,6 @@ class HomeScrollView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggedIn = ref.watch(authRepositoryProvider).isLoggedIn;
-
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
       child: RefreshIndicator(
@@ -135,12 +131,14 @@ class HomeScrollView extends ConsumerWidget {
                 child: searchBar,
               ),
 
-              if (!isLoggedIn) ...[
-                const HomeLoginBanner(),
-              ],
-
-              if (!isLoggedIn && isCatalogEmpty) ...[
-                const HomeGuestLoginPrompt(),
+              if (isLoading &&
+                  categories.isEmpty &&
+                  promotions.isEmpty &&
+                  todaysChoice.isEmpty &&
+                  specialDeals.isEmpty &&
+                  popularItems.isEmpty &&
+                  otherProducts.isEmpty) ...[
+                const HomeCatalogSkeleton(),
               ] else if (isCatalogEmpty) ...[
                 const HomeEmptyCatalogState(),
               ] else ...[
@@ -193,184 +191,6 @@ class HomeScrollView extends ConsumerWidget {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class HomeLoginBanner extends StatelessWidget {
-  const HomeLoginBanner({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF185B3A),
-            const Color(0xFF185B3A).withValues(alpha: 0.88),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF185B3A).withValues(alpha: 0.22),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.lock_open_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Log in to see items',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Sign in to view all items, save favorites & place orders',
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.88),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AuthPage()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF185B3A),
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              'Log In',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class HomeGuestLoginPrompt extends StatelessWidget {
-  const HomeGuestLoginPrompt({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFF185B3A).withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.lock_outline_rounded,
-                  size: 32,
-                  color: Color(0xFF185B3A),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Log in to see items',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF0F172A),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Please log in to your account to view available grocery items, special deals, and order directly.',
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                color: const Color(0xFF64748B),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: 200,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AuthPage()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF185B3A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Log In / Sign Up',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

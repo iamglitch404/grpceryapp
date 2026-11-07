@@ -37,7 +37,10 @@ class _CampaignDealsPageState extends ConsumerState<CampaignDealsPage> {
   }
 
   Future<void> _fetchCampaignProducts() async {
-    ref.read(campaignDealsProvider.notifier).setLoading(true);
+    final currentState = ref.read(campaignDealsProvider);
+    if (currentState.products.isEmpty) {
+      ref.read(campaignDealsProvider.notifier).setLoading(true);
+    }
     try {
       final productRepo = ref.read(productRepositoryProvider);
       final targetType = widget.campaign['target_type']?.toString().toLowerCase();
@@ -385,7 +388,7 @@ class _CampaignDealsPageState extends ConsumerState<CampaignDealsPage> {
                       // ── Product Grid ──
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: dealsState.isLoading
+                        child: (dealsState.isLoading && dealsState.products.isEmpty)
                             ? const Center(
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(vertical: 40),

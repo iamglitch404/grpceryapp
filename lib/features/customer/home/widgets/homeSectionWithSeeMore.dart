@@ -64,6 +64,37 @@ class HomeSectionWithSeeMore extends StatelessWidget {
     required this.products,
   });
 
+  String _safeString(dynamic val, [String defaultVal = '']) {
+    if (val == null) return defaultVal;
+    return val.toString();
+  }
+
+  String _safePrice(dynamic product) {
+    if (product == null) return '₹0';
+    if (product['price'] != null && product['price'].toString().trim().isNotEmpty) {
+      final p = product['price'].toString().trim();
+      return p.startsWith('₹') ? p : '₹$p';
+    }
+    if (product['price_paise'] != null) {
+      final paise = int.tryParse(product['price_paise'].toString()) ?? 0;
+      return '₹${paise ~/ 100}';
+    }
+    return '₹0';
+  }
+
+  String _safeOriginalPrice(dynamic product) {
+    if (product == null) return '';
+    if (product['original_price'] != null && product['original_price'].toString().trim().isNotEmpty) {
+      final p = product['original_price'].toString().trim();
+      return p.startsWith('₹') ? p : '₹$p';
+    }
+    if (product['original_price_paise'] != null) {
+      final paise = int.tryParse(product['original_price_paise'].toString()) ?? 0;
+      return '₹${paise ~/ 100}';
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -91,12 +122,12 @@ class HomeSectionWithSeeMore extends StatelessWidget {
                 .map(
                   (product) => HomeProductCard(
                     id: product['id'],
-                    image: product['image'] ?? '',
-                    title: product['title'] ?? '',
-                    price: product['price'] ?? '',
-                    unit: product['unit'] ?? '',
-                    originalPrice: product['original_price'] ?? '',
-                    description: product['description'],
+                    image: _safeString(product['image'] ?? product['image_url']),
+                    title: _safeString(product['title'] ?? product['name'], 'Grocery Product'),
+                    price: _safePrice(product),
+                    unit: _safeString(product['unit'], '1 kg'),
+                    originalPrice: _safeOriginalPrice(product),
+                    description: product['description']?.toString(),
                     rating: product['avg_rating'],
                   ),
                 )

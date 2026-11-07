@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:app/core/di/injection.dart';
 import 'package:app/core/services/cacheService.dart';
+import 'package:app/core/widgets/splashPage.dart';
 import 'package:app/features/customer/screens/mainPage.dart' as customer;
 import 'package:app/features/admin/dashboard/screens/mainPage.dart' as admin;
 import 'package:app/features/delivery/dashboard/screens/deliveryDashboardPage.dart' as delivery;
@@ -64,7 +65,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const MainScreen(),
+      home: const SplashPage(),
       debugShowCheckedModeBanner: false,
     );
   }

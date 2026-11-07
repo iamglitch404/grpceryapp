@@ -174,7 +174,6 @@ final homeCatalogProvider =
   final todaysChoice = repo.getCachedTodaysChoice();
   final specialDeals = repo.getCachedSpecialDeals();
   final popularItems = repo.getCachedPopularItems();
-  final isLoading = categories.isEmpty && todaysChoice.isEmpty && promotions.isEmpty;
   return HomeCatalogNotifier(
     HomeCatalogState(
       categories: categories,
@@ -182,7 +181,7 @@ final homeCatalogProvider =
       todaysChoice: todaysChoice,
       specialDeals: specialDeals,
       popularItems: popularItems,
-      isLoading: isLoading,
+      isLoading: false,
     ),
   );
 });
@@ -198,21 +197,23 @@ class LocationPickerState {
   final List<dynamic> suggestions;
   final bool isSearching;
   final String currentMapLayer;
+  final Set<dynamic> markers;
   final bool isTrackingUser;
   final bool showLayerMenu;
   final String mapProvider;
   final bool showProviderMenu;
 
   const LocationPickerState({
-    this.center = const LatLng(27.7172, 85.3240),
+    required this.center,
     this.userLocation,
     this.isLoading = false,
-    this.currentAddress = 'Kathmandu, Nepal',
-    this.mainAddress = 'Kathmandu',
-    this.subAddress = 'Bagmati Province, Nepal',
+    this.currentAddress = 'Select Location',
+    this.mainAddress = 'Select Location',
+    this.subAddress = 'Tap search or move map to select',
     this.suggestions = const [],
     this.isSearching = false,
-    this.currentMapLayer = 'standard',
+    this.currentMapLayer = 'streets',
+    this.markers = const {},
     this.isTrackingUser = false,
     this.showLayerMenu = false,
     this.mapProvider = 'osm',
@@ -229,6 +230,7 @@ class LocationPickerState {
     List<dynamic>? suggestions,
     bool? isSearching,
     String? currentMapLayer,
+    Set<dynamic>? markers,
     bool? isTrackingUser,
     bool? showLayerMenu,
     String? mapProvider,
@@ -244,6 +246,7 @@ class LocationPickerState {
       suggestions: suggestions ?? this.suggestions,
       isSearching: isSearching ?? this.isSearching,
       currentMapLayer: currentMapLayer ?? this.currentMapLayer,
+      markers: markers ?? this.markers,
       isTrackingUser: isTrackingUser ?? this.isTrackingUser,
       showLayerMenu: showLayerMenu ?? this.showLayerMenu,
       mapProvider: mapProvider ?? this.mapProvider,
@@ -253,11 +256,23 @@ class LocationPickerState {
 }
 
 class LocationPickerNotifier extends StateNotifier<LocationPickerState> {
-  LocationPickerNotifier() : super(const LocationPickerState());
+  LocationPickerNotifier()
+      : super(const LocationPickerState(center: LatLng(27.7172, 85.3240)));
 
   void update(LocationPickerState Function(LocationPickerState s) updater) {
     state = updater(state);
   }
+
+  void setCenter(LatLng pos) => state = state.copyWith(center: pos);
+  void setUserLocation(LatLng pos) => state = state.copyWith(userLocation: pos);
+  void setLoading(bool val) => state = state.copyWith(isLoading: val);
+  void setAddress({required String current, required String main, required String sub}) {
+    state = state.copyWith(currentAddress: current, mainAddress: main, subAddress: sub);
+  }
+  void setSuggestions(List<dynamic> list) => state = state.copyWith(suggestions: list);
+  void setSearching(bool val) => state = state.copyWith(isSearching: val);
+  void setMapLayer(String layer) => state = state.copyWith(currentMapLayer: layer);
+  void setMarkers(Set<dynamic> m) => state = state.copyWith(markers: m);
 }
 
 final locationPickerProvider =
@@ -265,41 +280,41 @@ final locationPickerProvider =
   (ref) => LocationPickerNotifier(),
 );
 
-// ── ProductDetailPage State & Notifier ──
+// ── ProductDetail State & Notifier ──
 class ProductDetailState {
   final int quantity;
-  final int selectedRating;
   final bool isFavorite;
-  final List<Map<String, dynamic>> reviews;
+  final int selectedRating;
   final bool isLoadingReviews;
+  final List<Map<String, dynamic>> reviews;
   final List<dynamic> similarProducts;
   final List<dynamic> youMayAlsoLike;
 
   const ProductDetailState({
     this.quantity = 1,
-    this.selectedRating = 5,
     this.isFavorite = false,
-    this.reviews = const [],
+    this.selectedRating = 5,
     this.isLoadingReviews = false,
+    this.reviews = const [],
     this.similarProducts = const [],
     this.youMayAlsoLike = const [],
   });
 
   ProductDetailState copyWith({
     int? quantity,
-    int? selectedRating,
     bool? isFavorite,
-    List<Map<String, dynamic>>? reviews,
+    int? selectedRating,
     bool? isLoadingReviews,
+    List<Map<String, dynamic>>? reviews,
     List<dynamic>? similarProducts,
     List<dynamic>? youMayAlsoLike,
   }) {
     return ProductDetailState(
       quantity: quantity ?? this.quantity,
-      selectedRating: selectedRating ?? this.selectedRating,
       isFavorite: isFavorite ?? this.isFavorite,
-      reviews: reviews ?? this.reviews,
+      selectedRating: selectedRating ?? this.selectedRating,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      reviews: reviews ?? this.reviews,
       similarProducts: similarProducts ?? this.similarProducts,
       youMayAlsoLike: youMayAlsoLike ?? this.youMayAlsoLike,
     );
@@ -314,38 +329,38 @@ class ProductDetailNotifier extends StateNotifier<ProductDetailState> {
   }
 }
 
-final productDetailProvider = StateNotifierProvider.autoDispose
-    .family<ProductDetailNotifier, ProductDetailState, String>(
+final productDetailProvider = StateNotifierProvider.family
+    .autoDispose<ProductDetailNotifier, ProductDetailState, String>(
   (ref, key) => ProductDetailNotifier(),
 );
 
-// ── ProductReviewsPage State & Notifier ──
+// ── ProductReviews State & Notifier ──
 class ProductReviewsState {
-  final int selectedRating;
-  final List<Map<String, dynamic>> reviews;
   final bool isLoadingReviews;
+  final List<Map<String, dynamic>> reviews;
+  final int selectedRating;
   final List<dynamic> similarProducts;
   final List<dynamic> youMayAlsoLike;
 
   const ProductReviewsState({
-    this.selectedRating = 5,
-    this.reviews = const [],
     this.isLoadingReviews = false,
+    this.reviews = const [],
+    this.selectedRating = 5,
     this.similarProducts = const [],
     this.youMayAlsoLike = const [],
   });
 
   ProductReviewsState copyWith({
-    int? selectedRating,
-    List<Map<String, dynamic>>? reviews,
     bool? isLoadingReviews,
+    List<Map<String, dynamic>>? reviews,
+    int? selectedRating,
     List<dynamic>? similarProducts,
     List<dynamic>? youMayAlsoLike,
   }) {
     return ProductReviewsState(
-      selectedRating: selectedRating ?? this.selectedRating,
-      reviews: reviews ?? this.reviews,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      reviews: reviews ?? this.reviews,
+      selectedRating: selectedRating ?? this.selectedRating,
       similarProducts: similarProducts ?? this.similarProducts,
       youMayAlsoLike: youMayAlsoLike ?? this.youMayAlsoLike,
     );
@@ -360,23 +375,25 @@ class ProductReviewsNotifier extends StateNotifier<ProductReviewsState> {
   }
 }
 
-final productReviewsProvider = StateNotifierProvider.autoDispose
-    .family<ProductReviewsNotifier, ProductReviewsState, String>(
+final productReviewsProvider = StateNotifierProvider.family
+    .autoDispose<ProductReviewsNotifier, ProductReviewsState, String>(
   (ref, key) => ProductReviewsNotifier(),
 );
 
-// ── SearchPage & HomeSearchComponent State & Notifier ──
+// ── SearchCatalog State & Notifier ──
 class SearchCatalogState {
   final int selectedCategoryIndex;
   final bool isLoading;
   final List<dynamic> categories;
   final List<dynamic> products;
+  final String searchQuery;
 
   const SearchCatalogState({
     this.selectedCategoryIndex = 0,
     this.isLoading = true,
     this.categories = const [],
     this.products = const [],
+    this.searchQuery = '',
   });
 
   SearchCatalogState copyWith({
@@ -384,12 +401,14 @@ class SearchCatalogState {
     bool? isLoading,
     List<dynamic>? categories,
     List<dynamic>? products,
+    String? searchQuery,
   }) {
     return SearchCatalogState(
       selectedCategoryIndex: selectedCategoryIndex ?? this.selectedCategoryIndex,
       isLoading: isLoading ?? this.isLoading,
       categories: categories ?? this.categories,
       products: products ?? this.products,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 }
@@ -402,12 +421,12 @@ class SearchCatalogNotifier extends StateNotifier<SearchCatalogState> {
   }
 }
 
-final searchPageProvider =
-    StateNotifierProvider.autoDispose<SearchCatalogNotifier, SearchCatalogState>(
+final searchPageProvider = StateNotifierProvider
+    .autoDispose<SearchCatalogNotifier, SearchCatalogState>(
   (ref) => SearchCatalogNotifier(),
 );
 
-final homeSearchComponentProvider =
-    StateNotifierProvider.autoDispose<SearchCatalogNotifier, SearchCatalogState>(
+final homeSearchComponentProvider = StateNotifierProvider
+    .autoDispose<SearchCatalogNotifier, SearchCatalogState>(
   (ref) => SearchCatalogNotifier(),
 );

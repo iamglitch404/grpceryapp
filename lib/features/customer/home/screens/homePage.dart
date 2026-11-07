@@ -318,57 +318,73 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
+  bool _hasExistingData() {
+    final state = ref.read(homeCatalogProvider);
+    return state.categories.isNotEmpty ||
+        state.promotions.isNotEmpty ||
+        state.todaysChoice.isNotEmpty ||
+        state.specialDeals.isNotEmpty ||
+        state.popularItems.isNotEmpty ||
+        state.otherProducts.isNotEmpty;
+  }
+
   Future<void> _fetchData() async {
     final repo = ref.read(productRepositoryProvider);
     final notifier = ref.read(homeCatalogProvider.notifier);
 
-    final currentState = ref.read(homeCatalogProvider);
-    final hasExistingData = currentState.categories.isNotEmpty ||
-        currentState.promotions.isNotEmpty ||
-        currentState.todaysChoice.isNotEmpty ||
-        currentState.specialDeals.isNotEmpty ||
-        currentState.popularItems.isNotEmpty ||
-        currentState.otherProducts.isNotEmpty;
-
-    if (mounted && !hasExistingData) {
+    if (mounted && !_hasExistingData()) {
       notifier.setLoading(true);
     }
 
     try {
-      await Future.wait([
-        repo.fetchCategoriesHome().then((data) {
-          if (mounted) notifier.setCategories(data);
-        }),
-        repo.fetchHomeDeals().then((promos) {
-          if (mounted) notifier.setPromotions(promos);
-        }),
-        repo.fetchTodaysChoice().then((data) {
-          if (mounted) notifier.setTodaysChoice(data);
-        }),
-        repo.fetchSpecialDeals().then((data) {
-          if (mounted) notifier.setSpecialDeals(data);
-        }),
-        repo.fetchPopularItems().then((data) {
-          if (mounted) notifier.setPopularItems(data);
-        }),
-        repo.fetchOtherItems().then((data) {
-          if (mounted) notifier.setOtherProducts(data);
-        }),
-      ]).timeout(const Duration(seconds: 6));
+      final results = await Future.wait([
+        repo.fetchCategoriesHome(),
+        repo.fetchHomeDeals(),
+        repo.fetchTodaysChoice(),
+        repo.fetchSpecialDeals(),
+        repo.fetchPopularItems(),
+        repo.fetchOtherItems(),
+        repo.fetchProducts(),
+      ]).timeout(const Duration(seconds: 5));
 
-      // Fallback: If sections are empty, fetch general active products
-      final stateAfter = ref.read(homeCatalogProvider);
-      if (stateAfter.todaysChoice.isEmpty &&
-          stateAfter.specialDeals.isEmpty &&
-          stateAfter.popularItems.isEmpty &&
-          stateAfter.otherProducts.isEmpty) {
-        final allProducts = await repo.fetchProducts();
-        if (mounted && allProducts.isNotEmpty) {
-          notifier.setOtherProducts(allProducts);
-        }
+      final categories = results[0];
+      final promos = results[1];
+      var todaysChoice = results[2];
+      var specialDeals = results[3];
+      var popularItems = results[4];
+      var otherProducts = results[5];
+      final allProducts = results[6];
+
+      if (todaysChoice.isEmpty && allProducts.isNotEmpty) {
+        todaysChoice = allProducts.take(6).toList();
+      }
+      if (specialDeals.isEmpty && allProducts.isNotEmpty) {
+        specialDeals = allProducts.length > 3 ? allProducts.sublist(1).take(6).toList() : allProducts;
+      }
+      if (popularItems.isEmpty && allProducts.isNotEmpty) {
+        popularItems = allProducts.length > 4 ? allProducts.sublist(2).take(6).toList() : allProducts;
+      }
+      if (otherProducts.isEmpty && allProducts.isNotEmpty) {
+        otherProducts = allProducts;
+      }
+
+      if (mounted) {
+        notifier.setCategories(categories);
+        notifier.setPromotions(promos);
+        notifier.setTodaysChoice(todaysChoice);
+        notifier.setSpecialDeals(specialDeals);
+        notifier.setPopularItems(popularItems);
+        notifier.setOtherProducts(otherProducts);
       }
     } catch (e) {
       debugPrint('[HomePage] Error fetching home data: $e');
+      if (mounted && !_hasExistingData()) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted && !_hasExistingData()) {
+            _fetchData();
+          }
+        });
+      }
     } finally {
       if (mounted) {
         notifier.setLoading(false);

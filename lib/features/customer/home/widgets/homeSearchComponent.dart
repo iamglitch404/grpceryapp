@@ -82,7 +82,11 @@ class HomeSearchComponentState extends ConsumerState<HomeSearchComponent> {
 
   Future<void> _fetchData() async {
     if (!mounted) return;
-    ref.read(homeSearchComponentProvider.notifier).update((s) => s.copyWith(isLoading: true));
+    final currentState = ref.read(homeSearchComponentProvider);
+    final hasData = currentState.categories.isNotEmpty || currentState.products.isNotEmpty;
+    if (!hasData) {
+      ref.read(homeSearchComponentProvider.notifier).update((s) => s.copyWith(isLoading: true));
+    }
     try {
       final parsedCategories =
           await ref.read(productRepositoryProvider).fetchCategories();
@@ -96,11 +100,15 @@ class HomeSearchComponentState extends ConsumerState<HomeSearchComponent> {
         categoryId = parsedCategories[selectedIdx]['id'];
       }
 
-      final parsedProducts =
+      var parsedProducts =
           await ref.read(productRepositoryProvider).searchProducts(
         widget.searchController.text.trim(),
         categoryId ?? '',
       );
+
+      if (parsedProducts.isEmpty && widget.searchController.text.trim().isEmpty) {
+        parsedProducts = await ref.read(productRepositoryProvider).fetchProducts();
+      }
 
       if (mounted) {
         ref.read(homeSearchComponentProvider.notifier).update(
@@ -147,17 +155,11 @@ class HomeSearchComponentState extends ConsumerState<HomeSearchComponent> {
         _buildCategoryList(searchState),
         if (searchState.categories.isNotEmpty) const SizedBox(height: 8),
         Expanded(
-          child: searchState.isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF185B3A),
-                  ),
-                )
-              : RefreshIndicator(
-                  color: const Color(0xFF185B3A),
-                  onRefresh: _fetchData,
-                  child: _buildProductGrid(searchState),
-                ),
+          child: RefreshIndicator(
+            color: const Color(0xFF185B3A),
+            onRefresh: _fetchData,
+            child: _buildProductGrid(searchState),
+          ),
         ),
       ],
     );
