@@ -318,23 +318,9 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
-  bool _hasExistingData() {
-    final state = ref.read(homeCatalogProvider);
-    return state.categories.isNotEmpty ||
-        state.promotions.isNotEmpty ||
-        state.todaysChoice.isNotEmpty ||
-        state.specialDeals.isNotEmpty ||
-        state.popularItems.isNotEmpty ||
-        state.otherProducts.isNotEmpty;
-  }
-
   Future<void> _fetchData() async {
     final repo = ref.read(productRepositoryProvider);
     final notifier = ref.read(homeCatalogProvider.notifier);
-
-    if (mounted && !_hasExistingData()) {
-      notifier.setLoading(true);
-    }
 
     try {
       final results = await Future.wait([
@@ -345,7 +331,7 @@ class _HomePageState extends ConsumerState<HomePage>
         repo.fetchPopularItems(),
         repo.fetchOtherItems(),
         repo.fetchProducts(),
-      ]).timeout(const Duration(seconds: 5));
+      ]).timeout(const Duration(seconds: 4));
 
       final categories = results[0];
       final promos = results[1];
@@ -378,13 +364,6 @@ class _HomePageState extends ConsumerState<HomePage>
       }
     } catch (e) {
       debugPrint('[HomePage] Error fetching home data: $e');
-      if (mounted && !_hasExistingData()) {
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted && !_hasExistingData()) {
-            _fetchData();
-          }
-        });
-      }
     } finally {
       if (mounted) {
         notifier.setLoading(false);

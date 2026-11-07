@@ -158,6 +158,10 @@ class _SubmitProductPageState extends ConsumerState<SubmitProductPage> {
     if (origPriceStr.isNotEmpty) {
       final origPrice = double.tryParse(origPriceStr) ?? 0.0;
       if (origPrice > 0) {
+        if (origPrice < price) {
+          _showToast('Original Price (MRP) cannot be less than Selling Price', isError: true);
+          return;
+        }
         origPricePaise = (origPrice * 100).round();
       }
     }
@@ -165,6 +169,9 @@ class _SubmitProductPageState extends ConsumerState<SubmitProductPage> {
     final stock = int.tryParse(stockStr) ?? 50;
 
     ref.read(submitProductIsSavingProvider.notifier).state = true;
+
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
       String? finalImageUrl = _imageUrl;
@@ -219,8 +226,16 @@ class _SubmitProductPageState extends ConsumerState<SubmitProductPage> {
         final success = await _repo.updateProduct(authRepo.authHeaders, id, payload);
 
         if (success && mounted) {
-          _showToast('Product updated successfully!');
-          Navigator.pop(context, true);
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Product updated successfully!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13.5)),
+              backgroundColor: const Color(0xFF185B3A),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+          navigator.pop(true);
         } else {
           throw Exception('Failed to update product');
         }
@@ -228,19 +243,33 @@ class _SubmitProductPageState extends ConsumerState<SubmitProductPage> {
         final result = await _repo.submitProductForApproval(authRepo.authHeaders, payload);
 
         if (result != null && mounted) {
-          _showToast('Product submitted! Admin will schedule pickup.');
-
           final createdProduct = result['product'] ?? payload;
-          await showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => ProductQrSheet(product: createdProduct),
+
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Product submitted! Admin will schedule pickup.', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13.5)),
+              backgroundColor: const Color(0xFF185B3A),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              margin: const EdgeInsets.all(16),
+            ),
           );
 
-          if (mounted) {
-            Navigator.pop(context, true);
-          }
+          // Safely pop form first
+          navigator.pop(true);
+
+          // Display QR Pass sheet safely on parent navigator context
+          Future.microtask(() {
+            final rootCtx = navigator.context;
+            if (rootCtx.mounted) {
+              showModalBottomSheet(
+                context: rootCtx,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => ProductQrSheet(product: createdProduct),
+              );
+            }
+          });
         } else {
           throw Exception('Failed to submit product');
         }
@@ -293,6 +322,12 @@ class _SubmitProductPageState extends ConsumerState<SubmitProductPage> {
 
     final isEditing = widget.initialProduct != null;
     final subcategories = _currentSubcategories;
+
+    final validCategoryIds = _categories.map((c) => c['id']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
+    final safeCategoryId = validCategoryIds.contains(_selectedCategoryId) ? _selectedCategoryId : null;
+
+    final validSubcategoryIds = subcategories.map((s) => s['id']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
+    final safeSubcategoryId = validSubcategoryIds.contains(_selectedSubcategoryId) ? _selectedSubcategoryId : null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
@@ -403,33 +438,44 @@ class _SubmitProductPageState extends ConsumerState<SubmitProductPage> {
                             const SizedBox(height: 2),
                             DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
-                                value: _selectedCategoryId,
+                                value: safeCategoryId,
                                 isExpanded: true,
                                 hint: Text(
                                   'Select Category',
                                   style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 14),
                                 ),
                                 icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
-                                items: _categories.map((c) {
-                                  final id = c['id']?.toString() ?? '';
-                                  final label = c['label'] ?? c['name'] ?? 'Category';
-                                  return DropdownMenuItem<String>(
-                                    value: id,
+                                items: [
+                                  DropdownMenuItem<String>(
+                                    value: null,
                                     child: Text(
-                                      label,
+                                      'None (Uncategorized)',
                                       style: GoogleFonts.outfit(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF0F172A),
+                                        color: const Color(0xFF64748B),
                                       ),
                                     ),
-                                  );
-                                }).toList(),
+                                  ),
+                                  ..._categories.map((c) {
+                                    final id = c['id']?.toString() ?? '';
+                                    final label = c['label'] ?? c['name'] ?? 'Category';
+                                    return DropdownMenuItem<String>(
+                                      value: id,
+                                      child: Text(
+                                        label,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ],
                                 onChanged: (val) {
-                                  if (val != null) {
-                                    ref.read(submitProductSelectedCategoryIdProvider.notifier).state = val;
-                                    _updateSubcategoryOnCategoryChange();
-                                  }
+                                  ref.read(submitProductSelectedCategoryIdProvider.notifier).state = val;
+                                  _updateSubcategoryOnCategoryChange();
                                 },
                               ),
                             ),
@@ -469,7 +515,7 @@ class _SubmitProductPageState extends ConsumerState<SubmitProductPage> {
                               const SizedBox(height: 2),
                               DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: _selectedSubcategoryId,
+                                  value: safeSubcategoryId,
                                   isExpanded: true,
                                   hint: Text(
                                     'Select Subcategory',

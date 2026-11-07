@@ -22,6 +22,7 @@ import 'package:app/features/auth/screens/authPage.dart';
 import 'package:app/features/customer/notifications/screens/notificationsPage.dart';
 import 'package:app/features/customer/notifications/providers/notificationState.dart';
 import 'package:app/features/customer/profile/widgets/profileBanners.dart';
+import 'package:app/features/customer/submissions/screens/submissionsPage.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -148,6 +149,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           onTap: () => _navigateToProtectedPage(
                             context,
                             const WishlistPage(),
+                          ),
+                        ),
+                        _buildSettingItem(
+                          context,
+                          icon: Icons.storefront_outlined,
+                          iconBgColor: const Color(0xFF185B3A).withValues(alpha: 0.15),
+                          iconColor: const Color(0xFF185B3A),
+                          title: 'Product Management',
+                          subtitle: 'Sell products & manage submissions',
+                          onTap: () => _navigateToProtectedPage(
+                            context,
+                            const SubmissionsPage(),
                           ),
                           showDivider: false,
                         ),

@@ -213,6 +213,147 @@ class _DashboardPageState extends ConsumerState<DashboardPage> with SingleTicker
     }
   }
 
+  void _showAdminProfileSheet() {
+    final user = ref.read(authRepositoryProvider).currentUser ?? {};
+    final name = (user['name'] ?? user['username'] ?? 'Dovan Administrator').toString();
+    final email = (user['email'] ?? 'admin@dovan.com').toString();
+    final avatar = user['profile_image'] ?? user['avatar_url'];
+    final hasAvatar = avatar != null && avatar.toString().isNotEmpty;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF185B3A).withValues(alpha: 0.1),
+                border: Border.all(color: const Color(0xFF185B3A), width: 1.5),
+              ),
+              child: ClipOval(
+                child: hasAvatar
+                    ? Image.network(
+                        avatar.toString(),
+                        width: 68,
+                        height: 68,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.admin_panel_settings_rounded,
+                          size: 36,
+                          color: Color(0xFF185B3A),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.admin_panel_settings_rounded,
+                        size: 36,
+                        color: Color(0xFF185B3A),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              name,
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              email,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Administrator Role',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF185B3A),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditAccountPage(
+                      user: user,
+                      initialName: name,
+                      initialGender: user['gender'],
+                      role: user['role'] ?? 'admin',
+                      status: user['status'] ?? 'active',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text('Edit Account Details', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13.5)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0F172A),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                minimumSize: const Size(double.infinity, 44),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await ref.read(authRepositoryProvider).logout();
+                },
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: Text('Log Out Admin', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE11D48),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(adminDashboardProvider);
@@ -278,21 +419,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> with SingleTicker
                       final hasAvatar = avatar != null && avatar.toString().isNotEmpty;
 
                       return GestureDetector(
-                        onTap: () {
-                          final currentUser = user ?? {};
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditAccountPage(
-                                user: currentUser,
-                                initialName: currentUser['name'] ?? 'Admin',
-                                initialGender: currentUser['gender'],
-                                role: currentUser['role'] ?? 'admin',
-                                status: currentUser['status'] ?? 'active',
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: _showAdminProfileSheet,
                         child: Container(
                           width: 34,
                           height: 34,

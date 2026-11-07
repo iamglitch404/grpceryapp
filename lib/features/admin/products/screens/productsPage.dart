@@ -968,7 +968,7 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
               ),
               const Spacer(),
               _buildQuickFilterChip(
-                label: 'All (${_products.length})',
+                label: 'All Stock (${_products.length})',
                 isSelected: _selectedStockStatus == 'All',
                 onTap: () => ref.read(adminProductsSelectedStockStatusProvider.notifier).state = 'All',
               ),

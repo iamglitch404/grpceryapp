@@ -139,8 +139,11 @@ class _ProductAddEditDialogState extends ConsumerState<ProductAddEditDialog> {
   }
 
   Future<void> handleSave() async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     if (titleCtrl.text.trim().isEmpty || priceCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Title and Price are required')),
       );
       return;
@@ -149,9 +152,13 @@ class _ProductAddEditDialogState extends ConsumerState<ProductAddEditDialog> {
     ref.read(productAddEditUiProvider.notifier).setSaving(true);
     try {
       final pPaise = ((double.tryParse(priceCtrl.text) ?? 0) * 100).round();
-      final origPPaise = origPriceCtrl.text.isNotEmpty
+      var origPPaise = origPriceCtrl.text.isNotEmpty
           ? ((double.tryParse(origPriceCtrl.text) ?? 0) * 100).round()
           : null;
+
+      if (origPPaise != null && origPPaise < pPaise) {
+        origPPaise = pPaise;
+      }
 
       final payload = {
         if (widget.isEdit) 'id': widget.product!['id'],
@@ -175,7 +182,6 @@ class _ProductAddEditDialogState extends ConsumerState<ProductAddEditDialog> {
         'Content-Type': 'application/json',
       };
       final url = Uri.parse('${AppConfig.apiUrl}/admin/products');
-      final messenger = ScaffoldMessenger.of(context);
 
       http.Response res;
       if (widget.isEdit) {
@@ -200,10 +206,6 @@ class _ProductAddEditDialogState extends ConsumerState<ProductAddEditDialog> {
       }
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        if (mounted) {
-          Navigator.pop(context);
-        }
-        widget.onSave();
         messenger.showSnackBar(
           SnackBar(
             content: Text(widget.isEdit ? 'Product updated!' : 'Product added!'),
@@ -212,6 +214,10 @@ class _ProductAddEditDialogState extends ConsumerState<ProductAddEditDialog> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
+        if (mounted) {
+          navigator.pop();
+        }
+        widget.onSave();
       } else {
         messenger.showSnackBar(
           SnackBar(content: Text('Failed to save: ${res.statusCode}')),
@@ -381,67 +387,89 @@ class _ProductAddEditDialogState extends ConsumerState<ProductAddEditDialog> {
                   // Category Dropdown
                   Text('Category *', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
                   const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      borderRadius: BorderRadius.circular(12),
-                      color: const Color(0xFFF8FAFC),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: selectedCatId,
-                        hint: Text('Select Category', style: GoogleFonts.outfit(fontSize: 13)),
-                        items: widget.categories.map<DropdownMenuItem<String>>((cat) {
-                          final id = cat['id']?.toString();
-                          final name = (cat['name'] ?? cat['label'] ?? 'Category').toString();
-                          return DropdownMenuItem<String>(
-                            value: id,
-                            child: Text(name, style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          ref.read(productAddEditUiProvider.notifier).selectCategory(val);
-                        },
-                      ),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final validCatIds = widget.categories
+                          .map((c) => c['id']?.toString())
+                          .whereType<String>()
+                          .toSet();
+                      final safeSelectedCatId =
+                          validCatIds.contains(selectedCatId) ? selectedCatId : null;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFFF8FAFC),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: safeSelectedCatId,
+                            hint: Text('Select Category', style: GoogleFonts.outfit(fontSize: 13)),
+                            items: widget.categories.map<DropdownMenuItem<String>>((cat) {
+                              final id = cat['id']?.toString();
+                              final name = (cat['name'] ?? cat['label'] ?? 'Category').toString();
+                              return DropdownMenuItem<String>(
+                                value: id,
+                                child: Text(name, style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              ref.read(productAddEditUiProvider.notifier).selectCategory(val);
+                            },
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 14),
 
                   // Subcategory Dropdown
                   Text('Subcategory', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
                   const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      borderRadius: BorderRadius.circular(12),
-                      color: dialogSubcategories.isEmpty ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: selectedSubId,
-                        hint: Text(
-                          dialogSubcategories.isEmpty
-                              ? 'Select a category first'
-                              : 'Select Subcategory (Optional)',
-                          style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+                  Builder(
+                    builder: (context) {
+                      final validSubIds = dialogSubcategories
+                          .map((s) => s['id']?.toString())
+                          .whereType<String>()
+                          .toSet();
+                      final safeSelectedSubId =
+                          validSubIds.contains(selectedSubId) ? selectedSubId : null;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(12),
+                          color: dialogSubcategories.isEmpty ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
                         ),
-                        items: dialogSubcategories.map<DropdownMenuItem<String>>((sub) {
-                          final id = sub['id']?.toString();
-                          final name = (sub['name'] ?? 'Subcategory').toString();
-                          return DropdownMenuItem<String>(
-                            value: id,
-                            child: Text(name, style: GoogleFonts.outfit(fontSize: 13.5)),
-                          );
-                        }).toList(),
-                        onChanged: dialogSubcategories.isEmpty
-                            ? null
-                            : (val) => ref.read(productAddEditUiProvider.notifier).selectSubcategory(val),
-                      ),
-                    ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: safeSelectedSubId,
+                            hint: Text(
+                              dialogSubcategories.isEmpty
+                                  ? 'Select a category first'
+                                  : 'Select Subcategory (Optional)',
+                              style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+                            ),
+                            items: dialogSubcategories.map<DropdownMenuItem<String>>((sub) {
+                              final id = sub['id']?.toString();
+                              final name = (sub['name'] ?? 'Subcategory').toString();
+                              return DropdownMenuItem<String>(
+                                value: id,
+                                child: Text(name, style: GoogleFonts.outfit(fontSize: 13.5)),
+                              );
+                            }).toList(),
+                            onChanged: dialogSubcategories.isEmpty
+                                ? null
+                                : (val) => ref.read(productAddEditUiProvider.notifier).selectSubcategory(val),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
 

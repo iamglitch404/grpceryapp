@@ -38,11 +38,17 @@ export async function POST(req: NextRequest) {
   const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
   const productCode = `AERO-PRD-${randomSuffix}`;
 
+  // Sanitize price_paise vs original_price_paise to ensure DB constraint original_price_paise >= price_paise
+  let origPricePaise = data.original_price_paise || null;
+  if (origPricePaise != null && origPricePaise < data.price_paise) {
+    origPricePaise = data.price_paise;
+  }
+
   const productPayload = {
     title: data.title,
     description: data.description || null,
     price_paise: data.price_paise,
-    original_price_paise: data.original_price_paise || null,
+    original_price_paise: origPricePaise,
     unit: data.unit,
     image_url: data.image_url || null,
     category_id: data.category_id || null,

@@ -1,13 +1,10 @@
 import { NextRequest } from 'next/server';
 import { ok, err, handleOptions, requireAuth } from '@/lib/api';
-import { supabaseAdmin } from '@/lib/supabase';
 import { compressImage, isImageMagicBytes, hasImageExtension } from '@/lib/image-compress';
+import { uploadToStorage } from '@/lib/storage-helper';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/tickets/upload — Upload Support Ticket Attachments (Images & Files)
-// ─────────────────────────────────────────────────────────────────────────────
-// Bucket: `support-attachments` (with `dovan` fallback)
-// Storage Path: `tickets/<filename>`
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -24,7 +21,7 @@ export async function POST(req: NextRequest) {
       return err('No file provided', 400);
     }
 
-    const MAX_SIZE = 25 * 1024 * 1024; // 25MB
+    const MAX_SIZE = 25 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       return err('File is too large. Maximum size is 25MB', 400);
     }
@@ -55,7 +52,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let bucketName = 'support-attachments';
+    const bucketName = 'dovan';
     const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const sanitizedBase = originalName
       .replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -64,48 +61,25 @@ export async function POST(req: NextRequest) {
       ? `tickets/${uniqueId}.${fileExtension}`
       : `tickets/${uniqueId}_${sanitizedBase}`;
 
-    let { error: uploadError } = await supabaseAdmin.storage
-      .from(bucketName)
-      .upload(fileName, uploadBuffer, {
-        contentType,
-        upsert: true,
-        cacheControl: '31536000',
-      });
-
-    // If support-attachments bucket had an issue, fallback to dovan bucket
-    if (uploadError) {
-      console.warn(`[tickets/upload] failed in '${bucketName}', trying 'dovan':`, uploadError.message);
-      bucketName = 'dovan';
-      const fallbackUpload = await supabaseAdmin.storage
-        .from(bucketName)
-        .upload(fileName, uploadBuffer, {
-          contentType,
-          upsert: true,
-          cacheControl: '31536000',
-        });
-      uploadError = fallbackUpload.error;
-    }
-
-    if (uploadError) {
-      console.error('[tickets/upload] error uploading attachment:', uploadError);
-      return err(`Failed to upload attachment: ${uploadError.message}`, 500);
-    }
-
-    const {
-      data: { publicUrl },
-    } = supabaseAdmin.storage.from(bucketName).getPublicUrl(fileName);
+    const publicUrl = await uploadToStorage(
+      bucketName,
+      fileName,
+      uploadBuffer,
+      contentType
+    );
 
     return ok({
-      url: `${publicUrl}?t=${Date.now()}`,
+      url: publicUrl,
+      image_url: publicUrl,
       file_name: originalName,
       file_size: uploadBuffer.length,
       file_type: isImage ? 'image' : 'file',
       mime_type: contentType,
       path: `${bucketName}/${fileName}`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[tickets/upload] catch error:', error);
-    return err('Internal Server Error', 500);
+    return err(error?.message || 'Internal Server Error', 500);
   }
 }
 

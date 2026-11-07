@@ -67,7 +67,7 @@ async function main() {
 
   if (existingAccount) {
     accountId = existingAccount.id;
-    console.log(`[2] Found existing account: ${accountId}. Updating credentials and role...`);
+    console.log(`[2] Found existing account: ${accountId}. Updating password hash and role...`);
     const { error: updateErr } = await supabaseAdmin
       .from('accounts')
       .update({
@@ -100,26 +100,8 @@ async function main() {
     accountId = newAccount.id;
   }
 
-  console.log(`[3] Ensuring user profile exists for account ${accountId}...`);
-  const { data: existingUser } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('account_id', accountId)
-    .maybeSingle();
-
-  if (!existingUser) {
-    const { error: userInsertErr } = await supabaseAdmin
-      .from('users')
-      .insert({
-        account_id: accountId,
-        referral_code: 'AEROADMIN',
-      });
-
-    if (userInsertErr) throw userInsertErr;
-  }
-
   // Set up active master OTP (123456)
-  console.log('[4] Registering active login OTP (123456)...');
+  console.log('[3] Registering active login OTP (123456)...');
   await supabaseAdmin
     .from('otp_requests')
     .delete()
@@ -140,7 +122,12 @@ async function main() {
       expires_at: oneMonthAhead,
     });
 
-  console.log('✅ Admin Account provisioning complete.');
+  console.log('✅ Admin Account password hash & OTP updated successfully!');
+  console.log('----------------------------------------------------');
+  console.log(`Email:    ${email}`);
+  console.log(`Password: ${password}`);
+  console.log(`OTP Code: 123456`);
+  console.log('----------------------------------------------------');
 }
 
 main().catch(err => {

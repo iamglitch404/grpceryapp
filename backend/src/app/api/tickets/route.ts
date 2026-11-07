@@ -20,11 +20,22 @@ export async function GET(req: NextRequest) {
       query = query.eq('account_id', auth.userId);
     }
 
-    const { data: tickets, error } = await query;
+    let { data: tickets, error } = await query;
 
-    if (error) {
-      console.warn('[tickets/GET] notice:', error.message);
-      return ok({ tickets: [] });
+    if (error || !tickets || tickets.length === 0) {
+      let fallbackQuery = supabaseAdmin
+        .from('tickets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (auth.role !== 'admin') {
+        fallbackQuery = fallbackQuery.eq('account_id', auth.userId);
+      }
+
+      const { data: fbData } = await fallbackQuery;
+      if (fbData && fbData.length > 0) {
+        tickets = fbData;
+      }
     }
 
     // Attach customer account info for admin view

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ok, err, handleOptions, requireAuth } from '@/lib/api';
-import { supabaseAdmin } from '@/lib/supabase';
 import { compressImage } from '@/lib/image-compress';
+import { uploadToStorage } from '@/lib/storage-helper';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/admin/products/upload — Upload & WebP Compress Product Image
@@ -43,32 +43,23 @@ export async function POST(req: NextRequest) {
     const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const fileName = `products/${uniqueId}.${compressed.extension}`;
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from(bucketName)
-      .upload(fileName, compressed.buffer, {
-        contentType: compressed.contentType,
-        upsert: true,
-        cacheControl: '31536000',
-      });
-
-    if (uploadError) {
-      console.error(`[products/upload] error in bucket '${bucketName}':`, uploadError);
-      return err(`Failed to upload product image into bucket '${bucketName}'`, 500);
-    }
-
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from(bucketName)
-      .getPublicUrl(fileName);
+    const imageUrl = await uploadToStorage(
+      bucketName,
+      fileName,
+      compressed.buffer,
+      compressed.contentType
+    );
 
     return ok({
-      url: `${publicUrl}?t=${Date.now()}`,
-      image_url: `${publicUrl}?t=${Date.now()}`,
+      url: imageUrl,
+      image_url: imageUrl,
+      data: { url: imageUrl, image_url: imageUrl },
       path: `${bucketName}/${fileName}`,
       bytes: compressed.compressedSize,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[products/upload] catch error:', error);
-    return err('Internal Server Error', 500);
+    return err(error?.message || 'Internal Server Error', 500);
   }
 }
 

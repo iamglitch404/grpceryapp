@@ -1,13 +1,10 @@
 import { NextRequest } from 'next/server';
 import { ok, err, handleOptions, requireAuth } from '@/lib/api';
-import { supabaseAdmin } from '@/lib/supabase';
 import { compressImage } from '@/lib/image-compress';
+import { uploadToStorage } from '@/lib/storage-helper';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/admin/promotions/upload
-// ─────────────────────────────────────────────────────────────────────────────
-// Bucket: `dovan`
-// Storage Path: `promotions/<slug_or_id>.webp`
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -38,35 +35,26 @@ export async function POST(req: NextRequest) {
     try {
       compressed = await compressImage(rawBuffer, 'promotion', file.name, file.type);
     } catch (e: any) {
-      return err(e?.message || 'Invalid image file. Only image formats (JPG, PNG, WEBP, HEIC, GIF, AVIF) are allowed', 400);
+      return err(e?.message || 'Invalid image file. Only image formats are allowed', 400);
     }
 
+    const bucketName = 'dovan';
     const storagePath = `promotions/${cleanSlug}.${compressed.extension}`;
 
-    // Upload to Supabase Storage bucket 'dovan'
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('dovan')
-      .upload(storagePath, compressed.buffer, {
-        contentType: compressed.contentType,
-        cacheControl: '31536000',
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error('[promotions/upload] Supabase upload error:', uploadError);
-      return err(`Failed to upload image: ${uploadError.message}`, 500);
-    }
-
-    // Get public URL
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from('dovan')
-      .getPublicUrl(storagePath);
+    const imageUrl = await uploadToStorage(
+      bucketName,
+      storagePath,
+      compressed.buffer,
+      compressed.contentType
+    );
 
     return ok({
       message: 'Promotion image uploaded successfully',
-      image_url: publicUrlData.publicUrl,
+      url: imageUrl,
+      image_url: imageUrl,
+      data: { url: imageUrl, image_url: imageUrl },
       storage_path: storagePath,
-      bucket: 'dovan',
+      bucket: bucketName,
     });
   } catch (error: any) {
     console.error('[promotions/upload] Unexpected error:', error);

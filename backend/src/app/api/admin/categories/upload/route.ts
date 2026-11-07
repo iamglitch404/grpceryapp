@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ok, err, handleOptions, requireAuth } from '@/lib/api';
-import { supabaseAdmin } from '@/lib/supabase';
 import { compressImage } from '@/lib/image-compress';
+import { uploadToStorage } from '@/lib/storage-helper';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/admin/categories/upload
@@ -44,41 +44,28 @@ export async function POST(req: NextRequest) {
       return err(e?.message || 'Invalid image file. Only image formats (JPG, PNG, WEBP, SVG, HEIC, GIF) are allowed', 400);
     }
 
-    // Determine target folder: 'categories' or 'subcategories' inside 'dovan' bucket
     const bucketName = 'dovan';
     const folder = type.toLowerCase().startsWith('sub') ? 'subcategories' : 'categories';
     const fileName = `${folder}/${cleanSlug}.${compressed.extension}`;
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from(bucketName)
-      .upload(fileName, compressed.buffer, {
-        contentType: compressed.contentType,
-        upsert: true,
-        cacheControl: '31536000',
-      });
-
-    if (uploadError) {
-      console.error(`[categories/upload] upload error into bucket '${bucketName}':`, uploadError);
-      return err(`Failed to upload image into bucket '${bucketName}'`, 500);
-    }
-
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from(bucketName)
-      .getPublicUrl(fileName);
-
-    const timestamp = Date.now();
-    const finalUrl = `${publicUrl}?t=${timestamp}`;
+    const finalUrl = await uploadToStorage(
+      bucketName,
+      fileName,
+      compressed.buffer,
+      compressed.contentType
+    );
 
     return ok({
       url: finalUrl,
       image_url: finalUrl,
+      data: { url: finalUrl, image_url: finalUrl },
       path: `${bucketName}/${fileName}`,
       type: folder,
       bytes: compressed.compressedSize,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[categories/upload] catch error:', error);
-    return err('Internal Server Error', 500);
+    return err(error?.message || 'Internal Server Error', 500);
   }
 }
 
