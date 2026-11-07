@@ -1861,6 +1861,26 @@ DO $$ BEGIN
     CREATE POLICY "Allow support attachments upload"
       ON storage.objects FOR INSERT
       WITH CHECK (bucket_id = 'support-attachments');
+
+    -- Storage bucket 'dovan' for products, categories, home deals, promotions & profile avatars
+    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    VALUES ('dovan', 'dovan', true, 26214400, NULL)
+    ON CONFLICT (id) DO UPDATE SET
+      public = true,
+      file_size_limit = 26214400,
+      allowed_mime_types = NULL;
+
+    -- Public read policy for 'dovan' storage bucket
+    DROP POLICY IF EXISTS "Public dovan storage read access" ON storage.objects;
+    CREATE POLICY "Public dovan storage read access"
+      ON storage.objects FOR SELECT
+      USING (bucket_id = 'dovan');
+
+    -- Insert/upload policy for 'dovan' storage bucket
+    DROP POLICY IF EXISTS "Allow dovan storage upload" ON storage.objects;
+    CREATE POLICY "Allow dovan storage upload"
+      ON storage.objects FOR INSERT
+      WITH CHECK (bucket_id = 'dovan');
   END IF;
 END $$;
 
